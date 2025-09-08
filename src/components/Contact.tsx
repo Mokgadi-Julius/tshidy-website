@@ -15,6 +15,7 @@ const Contact = () => {
 
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submitStatus, setSubmitStatus] = useState<'idle' | 'success' | 'error'>('idle');
+  const [submissionType, setSubmissionType] = useState<'whatsapp' | 'form'>('whatsapp');
 
   const services = [
     'Nannies',
@@ -56,7 +57,7 @@ const Contact = () => {
     }
   ];
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent, type: 'whatsapp' | 'form' = submissionType) => {
     e.preventDefault();
     
     // Validate required fields
@@ -67,22 +68,23 @@ const Contact = () => {
     
     setIsSubmitting(true);
     setSubmitStatus('idle');
+    setSubmissionType(type);
     
     try {
       // Prepare data for Google Apps Script
       const submitData = {
-        formType: "tshidy-contact-form",
+        formType: "mppreadymix",
         name: formData.name,
         email: formData.email,
         phone: formData.phone,
         service: formData.service,
         message: formData.message,
         timestamp: new Date().toISOString(),
-        source: "Website Contact Form"
+        source: type === 'whatsapp' ? "Website Contact Form - WhatsApp" : "Website Contact Form - Direct"
       };
 
       // Submit to Google Apps Script
-      const response = await fetch('https://script.google.com/macros/s/AKfycbzdEjBW8cpfs8UZmWk195lcI_NX2AJSzc7EVe6T3XaxBN5VH2aXqm-Xe5tr3KVuCXE/exec', {
+      await fetch('https://script.google.com/macros/s/AKfycbzdEjBW8cpfs8UZmWk195lcI_NX2AJSzc7EVe6T3XaxBN5VH2aXqm-Xe5tr3KVuCXE/exec', {
         method: 'POST',
         mode: 'no-cors',
         headers: {
@@ -104,8 +106,9 @@ const Contact = () => {
         message: ''
       });
 
-      // Also open WhatsApp for immediate contact
-      const whatsappMessage = `Hi! I just submitted a contact form on your website.
+      // Open WhatsApp only for WhatsApp submission type
+      if (type === 'whatsapp') {
+        const whatsappMessage = `Hi! I just submitted a contact form on your website.
 
 Name: ${formData.name}
 Email: ${formData.email}
@@ -113,8 +116,9 @@ Phone: ${formData.phone}
 Service: ${formData.service}
 Message: ${formData.message}`;
 
-      const whatsappUrl = `https://wa.me/27649872099?text=${encodeURIComponent(whatsappMessage)}`;
-      window.open(whatsappUrl, '_blank');
+        const whatsappUrl = `https://wa.me/27649872099?text=${encodeURIComponent(whatsappMessage)}`;
+        window.open(whatsappUrl, '_blank');
+      }
       
     } catch (error) {
       console.error('Form submission error:', error);
@@ -165,7 +169,7 @@ Message: ${formData.message}`;
               <p className="text-gray-600">Fill out the form below and we&apos;ll get back to you as soon as possible.</p>
             </div>
 
-            <form onSubmit={handleSubmit} className="space-y-6">
+            <form onSubmit={(e) => handleSubmit(e, 'whatsapp')} className="space-y-6">
               <div className="grid md:grid-cols-2 gap-6">
                 <div>
                   <label className="block text-gray-700 font-medium mb-2">
@@ -245,43 +249,84 @@ Message: ${formData.message}`;
                 />
               </div>
 
-              <motion.button
-                type="submit"
-                disabled={isSubmitting}
-                whileHover={{ scale: isSubmitting ? 1 : 1.02 }}
-                whileTap={{ scale: isSubmitting ? 1 : 0.98 }}
-                className={`w-full py-4 px-6 rounded-lg font-semibold text-lg transition-colors duration-200 shadow-lg flex items-center justify-center ${
-                  isSubmitting 
-                    ? 'bg-gray-400 cursor-not-allowed' 
-                    : submitStatus === 'success'
-                    ? 'bg-green-600 hover:bg-green-700'
-                    : submitStatus === 'error'
-                    ? 'bg-red-600 hover:bg-red-700'
-                    : 'bg-green-600 hover:bg-green-700'
-                } text-white`}
-              >
-                {isSubmitting ? (
-                  <>
-                    <div className="w-5 h-5 mr-2 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
-                    Sending...
-                  </>
-                ) : submitStatus === 'success' ? (
-                  <>
-                    <FaWhatsapp className="w-5 h-5 mr-2" />
-                    Sent! Opening WhatsApp...
-                  </>
-                ) : submitStatus === 'error' ? (
-                  <>
-                    <FaWhatsapp className="w-5 h-5 mr-2" />
-                    Try Again
-                  </>
-                ) : (
-                  <>
-                    <FaWhatsapp className="w-5 h-5 mr-2" />
-                    Send via WhatsApp
-                  </>
-                )}
-              </motion.button>
+              <div className="space-y-3">
+                <motion.button
+                  type="submit"
+                  disabled={isSubmitting && submissionType === 'whatsapp'}
+                  whileHover={{ scale: (isSubmitting && submissionType === 'whatsapp') ? 1 : 1.02 }}
+                  whileTap={{ scale: (isSubmitting && submissionType === 'whatsapp') ? 1 : 0.98 }}
+                  className={`w-full py-4 px-6 rounded-lg font-semibold text-lg transition-colors duration-200 shadow-lg flex items-center justify-center ${
+                    (isSubmitting && submissionType === 'whatsapp')
+                      ? 'bg-gray-400 cursor-not-allowed' 
+                      : (submitStatus === 'success' && submissionType === 'whatsapp')
+                      ? 'bg-green-600 hover:bg-green-700'
+                      : (submitStatus === 'error' && submissionType === 'whatsapp')
+                      ? 'bg-red-600 hover:bg-red-700'
+                      : 'bg-green-600 hover:bg-green-700'
+                  } text-white`}
+                >
+                  {(isSubmitting && submissionType === 'whatsapp') ? (
+                    <>
+                      <div className="w-5 h-5 mr-2 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                      Sending...
+                    </>
+                  ) : (submitStatus === 'success' && submissionType === 'whatsapp') ? (
+                    <>
+                      <FaWhatsapp className="w-5 h-5 mr-2" />
+                      Sent! Opening WhatsApp...
+                    </>
+                  ) : (submitStatus === 'error' && submissionType === 'whatsapp') ? (
+                    <>
+                      <FaWhatsapp className="w-5 h-5 mr-2" />
+                      Try Again
+                    </>
+                  ) : (
+                    <>
+                      <FaWhatsapp className="w-5 h-5 mr-2" />
+                      Send via WhatsApp
+                    </>
+                  )}
+                </motion.button>
+
+                <motion.button
+                  type="button"
+                  onClick={(e) => handleSubmit(e as React.FormEvent, 'form')}
+                  disabled={isSubmitting && submissionType === 'form'}
+                  whileHover={{ scale: (isSubmitting && submissionType === 'form') ? 1 : 1.02 }}
+                  whileTap={{ scale: (isSubmitting && submissionType === 'form') ? 1 : 0.98 }}
+                  className={`w-full py-4 px-6 rounded-lg font-semibold text-lg transition-colors duration-200 shadow-lg flex items-center justify-center ${
+                    (isSubmitting && submissionType === 'form')
+                      ? 'bg-gray-400 cursor-not-allowed' 
+                      : (submitStatus === 'success' && submissionType === 'form')
+                      ? 'bg-blue-600 hover:bg-blue-700'
+                      : (submitStatus === 'error' && submissionType === 'form')
+                      ? 'bg-red-600 hover:bg-red-700'
+                      : 'bg-blue-600 hover:bg-blue-700'
+                  } text-white`}
+                >
+                  {(isSubmitting && submissionType === 'form') ? (
+                    <>
+                      <div className="w-5 h-5 mr-2 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                      Submitting...
+                    </>
+                  ) : (submitStatus === 'success' && submissionType === 'form') ? (
+                    <>
+                      <FaEnvelope className="w-5 h-5 mr-2" />
+                      Form Submitted!
+                    </>
+                  ) : (submitStatus === 'error' && submissionType === 'form') ? (
+                    <>
+                      <FaEnvelope className="w-5 h-5 mr-2" />
+                      Try Again
+                    </>
+                  ) : (
+                    <>
+                      <FaEnvelope className="w-5 h-5 mr-2" />
+                      Submit Form
+                    </>
+                  )}
+                </motion.button>
+              </div>
 
               {/* Status Messages */}
               {submitStatus === 'success' && (
@@ -291,7 +336,9 @@ Message: ${formData.message}`;
                   className="mt-4 p-4 bg-green-50 border border-green-200 rounded-lg"
                 >
                   <p className="text-green-800 font-medium">
-                    ✅ Message sent successfully! We'll get back to you soon.
+                    ✅ {submissionType === 'whatsapp' 
+                      ? 'Message sent successfully! WhatsApp is opening for immediate contact.' 
+                      : 'Form submitted successfully! We\'ll get back to you soon.'}
                   </p>
                 </motion.div>
               )}
